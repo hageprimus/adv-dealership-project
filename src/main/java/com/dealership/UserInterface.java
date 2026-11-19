@@ -1,5 +1,8 @@
 package com.dealership;
 
+import com.dealership.contracts.Contract;
+import com.dealership.contracts.LeaseContract;
+import com.dealership.contracts.SalesContract;
 import com.dealership.vehicles.Dealership;
 import com.dealership.vehicles.DealershipFileManager;
 import com.dealership.vehicles.Vehicle;
@@ -7,7 +10,9 @@ import com.dealership.vehicles.Vehicle;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.Scanner;
 
 public class UserInterface {
@@ -19,8 +24,9 @@ public class UserInterface {
     private static final int RECORDING_FEE = 100;
     private static final int SMALL_PROCESSING_FEE = 295;
     private static final int BIG_PROCESSING_FEE = 495;
+
     private static final double LEASE_APR = 0.04;
-    private static final double LEASE_LENGTH = 36;
+    private static final int LEASE_LENGTH = 36;
 
     private static final String MAIN_MENU = """
             Enter an option:
@@ -33,6 +39,7 @@ public class UserInterface {
             7 - Display vehicles by type.
             8 - Add a vehicle.
             9 - Remove a vehicle.
+            10 - Sell or lease a vehicle.
             0 - EXIT
             """;
 
@@ -76,24 +83,13 @@ public class UserInterface {
                     String type = getInputFromConsole("Enter the type of vehicle to search for.", s);
                     displayVehicles(dealership.getVehicles(v -> dealership.searchType(type, v)));
                 }
-                case 8 -> {
-                    int vin = Integer.parseInt(getInputFromConsole("Enter the VIN of the vehicle you are entering.", s));
-                    int year = Integer.parseInt(getInputFromConsole("Enter the year the vehicle was manufactured.", s));
-                    String make = getInputFromConsole("Enter the make (manufacturer) of the vehicle.", s);
-                    String model = getInputFromConsole("Enter the model of the vehicle.", s);
-                    String vehicleType = getInputFromConsole("Enter the type of vehicle you are entering.", s);
-                    String color = getInputFromConsole("Enter the color of the vehicle.", s);
-                    int odometer = Integer.parseInt(getInputFromConsole("Enter the current miles traveled of the vehicle.", s));
-                    BigDecimal price = new BigDecimal(getInputFromConsole("Enter the current price of the vehicle.", s));
-                    dealership.addVehicle(new Vehicle(vin, year, make, model, vehicleType, color, odometer, price));
-                    DealershipFileManager.saveDealership(dealership);
-                }
+                case 8 -> addVehicle(s);
                 case 9 -> {
                     int vin = Integer.parseInt(getInputFromConsole("Enter the VIN of the vehicle to remove.", s));
                     Vehicle remove = dealership.getVehicles(v -> v.getVin() == vin).get(0);
-                    dealership.removeVehicle(remove);
-                    DealershipFileManager.saveDealership(dealership);
+                    removeVehicle(remove);
                 }
+                case 10 -> sellLeaseVehicle(s);
                 case 0 -> {
                     System.out.println("Exiting program.");
                     complete = true;
@@ -101,6 +97,57 @@ public class UserInterface {
             }
         } while (!complete);
         s.close();
+    }
+
+    private static void addVehicle(Scanner s) throws IOException {
+        int vin = Integer.parseInt(getInputFromConsole("Enter the VIN of the vehicle you are entering.", s));
+        int year = Integer.parseInt(getInputFromConsole("Enter the year the vehicle was manufactured.", s));
+        String make = getInputFromConsole("Enter the make (manufacturer) of the vehicle.", s);
+        String model = getInputFromConsole("Enter the model of the vehicle.", s);
+        String vehicleType = getInputFromConsole("Enter the type of vehicle you are entering.", s);
+        String color = getInputFromConsole("Enter the color of the vehicle.", s);
+        int odometer = Integer.parseInt(getInputFromConsole("Enter the current miles traveled of the vehicle.", s));
+        BigDecimal price = new BigDecimal(getInputFromConsole("Enter the current price of the vehicle.", s));
+        dealership.addVehicle(new Vehicle(vin, year, make, model, vehicleType, color, odometer, price));
+        DealershipFileManager.saveDealership(dealership);
+    }
+
+    private static void removeVehicle(Vehicle v) throws IOException {
+        dealership.removeVehicle(v);
+        DealershipFileManager.saveDealership(dealership);
+    }
+
+    private static void sellLeaseVehicle(Scanner s) throws IOException {
+        Contract contract;
+
+        //Figure out what kind of contract this is
+        String type = getInputFromConsole("Enter if this is a \"SALE\" or a \"LEASE\".", s);
+        while (!type.equalsIgnoreCase("sale") && !type.equalsIgnoreCase("lease")) {
+            System.out.println("Incorrect input!");
+            type = getInputFromConsole("Enter if this is a \"SALE\" or a \"LEASE\".", s);
+        }
+
+        //Get the vehicle that's going out and remove it from the dealership
+        int vin = Integer.parseInt(getInputFromConsole("Enter the VIN of the vehicle.", s));
+        Vehicle vehicle = dealership.getVehicles(v -> v.getVin() == vin).get(0);
+        removeVehicle(vehicle);
+
+        //Create the contract
+        String name = getInputFromConsole("Enter the name of the customer buying or leasing this vehicle.", s);
+        String email = getInputFromConsole("Enter the email of the customer buying or leasing this vehicle.", s);
+        switch (type.toLowerCase()) {
+            case "sale" -> {
+                String financePrompt = getInputFromConsole("Enter \"Y\" if the customer wants financing on this purchase.\nAny other input will be assumed to be a direct sale.", s);
+                boolean financed = financePrompt.equalsIgnoreCase("y");
+                double apr = vehicle.getPrice().compareTo(BigDecimal.valueOf(10_000)) < 0 ? SMALL_APR : BIG_APR;
+                int processing = vehicle.getPrice().compareTo(BigDecimal.valueOf(10_000)) < 0 ? SMALL_PROCESSING_FEE : BIG_PROCESSING_FEE;
+                int loanLength = vehicle.getPrice().compareTo(BigDecimal.valueOf(10_000)) < 0 ? LONG_LOAN : SHORT_LOAN;
+                contract = new SalesContract(LocalDate.now().toString(), name, email, vehicle, financed, SALES_TAX, apr, RECORDING_FEE, processing, loanLength);
+            }
+            case "lease" -> contract = new LeaseContract(LocalDate.now().toString(), name, email, vehicle, LEASE_APR, LEASE_LENGTH);
+        }
+
+        //TODO: Add contract to the ledger file
     }
 
     private static void init() throws FileNotFoundException {
