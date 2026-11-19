@@ -1,6 +1,7 @@
 package com.dealership;
 
 import com.dealership.contracts.Contract;
+import com.dealership.contracts.ContractFileManager;
 import com.dealership.contracts.LeaseContract;
 import com.dealership.contracts.SalesContract;
 import com.dealership.vehicles.Dealership;
@@ -118,7 +119,8 @@ public class UserInterface {
     }
 
     private static void sellLeaseVehicle(Scanner s) throws IOException {
-        Contract contract;
+        //Initialize contract object
+        Contract contract = null;
 
         //Figure out what kind of contract this is
         String type = getInputFromConsole("Enter if this is a \"SALE\" or a \"LEASE\".", s);
@@ -148,6 +150,7 @@ public class UserInterface {
         }
 
         //TODO: Add contract to the ledger file
+        ContractFileManager.addContract(contract);
     }
 
     private static void init() throws FileNotFoundException {
