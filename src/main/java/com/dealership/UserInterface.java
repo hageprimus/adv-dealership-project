@@ -11,6 +11,17 @@ import java.util.List;
 import java.util.Scanner;
 
 public class UserInterface {
+    private static final double SALES_TAX = 0.05;
+    private static final double SMALL_APR = 0.0425;
+    private static final double BIG_APR = 0.0525;
+    private static final int SHORT_LOAN = 24;
+    private static final int LONG_LOAN = 48;
+    private static final int RECORDING_FEE = 100;
+    private static final int SMALL_PROCESSING_FEE = 295;
+    private static final int BIG_PROCESSING_FEE = 495;
+    private static final double LEASE_APR = 0.04;
+    private static final double LEASE_LENGTH = 36;
+
     private static final String MAIN_MENU = """
             Enter an option:
             1 - Display all vehicles.
