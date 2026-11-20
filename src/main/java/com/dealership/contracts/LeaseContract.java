@@ -16,6 +16,24 @@ public class LeaseContract extends Contract {
         this.loanLength = loanLength;
     }
 
+    //region Getters/Setters
+    public double getApr() {
+        return apr;
+    }
+
+    public void setApr(double apr) {
+        this.apr = apr;
+    }
+
+    public int getLoanLength() {
+        return loanLength;
+    }
+
+    public void setLoanLength(int loanLength) {
+        this.loanLength = loanLength;
+    }
+    //endregion
+
     public BigDecimal getExpectedEndValue() {
         return vehicle.getPrice().multiply(BigDecimal.valueOf(END_VALUE_FACTOR));
     }
